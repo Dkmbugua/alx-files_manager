@@ -15,7 +15,7 @@ class RedisClient {
       console.log('Redis client connected to the server');
     });
 
-    // Connect to Redis
+    // Connect to Redis (automatic in Redis v4+)
     this.client.connect().catch((err) => {
       console.error(`Failed to connect to Redis: ${err.message}`);
     });
@@ -26,7 +26,7 @@ class RedisClient {
    * @returns {boolean} - True if Redis is connected, otherwise false
    */
   isAlive() {
-    return this.client.isOpen;
+    return this.client.isReady;
   }
 
   /**
@@ -36,7 +36,8 @@ class RedisClient {
    */
   async get(key) {
     try {
-      return await this.client.get(key);
+      const value = await this.client.get(key);
+      return value !== null ? value : null;
     } catch (error) {
       console.error(`Error getting value from Redis: ${error.message}`);
       return null;
@@ -46,12 +47,12 @@ class RedisClient {
   /**
    * Set a value in Redis with expiration
    * @param {string} key - The key to set
-   * @param {string} value - The value to assign
+   * @param {string | number} value - The value to assign
    * @param {number} duration - Time to live (in seconds)
    */
   async set(key, value, duration) {
     try {
-      await this.client.setEx(key, duration, value);
+      await this.client.setEx(key, duration, String (value));
     } catch (error) {
       console.error(`Error setting value in Redis: ${error.message}`);
     }
@@ -60,6 +61,7 @@ class RedisClient {
   /**
    * Delete a key from Redis
    * @param {string} key - The key to delete
+   * @returns {Promise<void>}
    */
   async del(key) {
     try {
