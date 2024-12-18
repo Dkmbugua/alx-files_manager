@@ -18,12 +18,13 @@ class RedisClient {
   }
 
   isAlive() {
-    return this.client.isReady;
+    return this.client && this.client.isOpen;
   }
 
   async get(key) {
     try {
-      return await this.client.get(key);
+      const value = await this.client.get(key);
+      return value;
     } catch (error) {
       console.error(`Error getting value from Redis: ${error.message}`);
       return null;
