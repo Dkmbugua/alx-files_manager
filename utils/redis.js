@@ -3,51 +3,56 @@ const { createClient } = require('redis');
 class RedisClient {
   constructor() {
     this.client = createClient();
-    this.connected = false;
 
+    this.connected = false; // Track the connection state
+
+    // Handle connection errors
     this.client.on('error', (err) => {
       console.error(`Redis client error: ${err.message}`);
       this.connected = false;
     });
 
-    this.client.on('ready', () => {
+    // Log successful connection
+    this.client.on('connect', () => {
       console.log('Redis client connected to the server');
+    });
+
+    // Fully connected and ready
+    this.client.on('ready', () => {
+      console.log('Redis client successfully connected');
       this.connected = true;
+    });
+
+    // Start the connection
+    this.client.connect().catch((err) => {
+      console.error(`Failed to connect to Redis: ${err.message}`);
     });
   }
 
-  // Connect method to ensure connection is complete
-  async connect() {
-    if (!this.client.isOpen) {
-      try {
-        await this.client.connect();
-        console.log('Redis client successfully connected');
-      } catch (err) {
-        console.error(`Failed to connect to Redis: ${err.message}`);
-      }
-    }
-  }
-
+  /**
+   * Check if Redis is alive
+   * @returns {boolean}
+   */
   isAlive() {
-    return this.client.isOpen && this.connected;
+    return this.connected; // Use the tracked connection state
   }
 
+  /**
+   * Get a value from Redis
+   */
   async get(key) {
-    await this.connect(); // Ensure connection
     try {
-      const value = await this.client.get(key);
-      if (value === null) {
-        console.log(`Key "${key}" not found in Redis`);
-      }
-      return value;
+      return await this.client.get(key);
     } catch (error) {
-      console.error(`Error getting key "${key}": ${error.message}`);
+      console.error(`Error getting value from Redis: ${error.message}`);
       return null;
     }
   }
 
+  /**
+   * Set a value with optional expiration
+   */
   async set(key, value, duration = 0) {
-    await this.connect(); // Ensure connection
     try {
       if (duration > 0) {
         await this.client.setEx(key, duration, String(value));
@@ -56,29 +61,21 @@ class RedisClient {
       }
       console.log(`Key "${key}" set successfully`);
     } catch (error) {
-      console.error(`Error setting key "${key}": ${error.message}`);
+      console.error(`Error setting value in Redis: ${error.message}`);
     }
   }
 
+  /**
+   * Delete a key
+   */
   async del(key) {
-    await this.connect(); // Ensure connection
     try {
       await this.client.del(key);
       console.log(`Key "${key}" deleted successfully`);
     } catch (error) {
-      console.error(`Error deleting key "${key}": ${error.message}`);
-    }
-  }
-
-  async disconnect() {
-    try {
-      await this.client.quit();
-      console.log('Redis client disconnected');
-    } catch (error) {
-      console.error(`Error during Redis disconnection: ${error.message}`);
+      console.error(`Error deleting key from Redis: ${error.message}`);
     }
   }
 }
 
-const redisClient = new RedisClient();
-module.exports = redisClient;
+module.exports = new RedisClient();
