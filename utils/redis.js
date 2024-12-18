@@ -12,18 +12,26 @@ class RedisClient {
       console.log('Redis client connected to the server');
     });
 
-    this.client.connect().catch((err) => {
-      console.error(`Failed to connect to Redis: ${err.message}`);
-    });
+    (async () => {
+      try {
+        await this.client.connect();
+        console.log('Redis client successfully connected');
+      } catch (err) {
+        console.error(`Failed to connect to Redis: ${err.message}`);
+      }
+    })();
   }
 
   isAlive() {
-    return this.client && this.client.isOpen;
+    return this.client.isReady;
   }
 
   async get(key) {
     try {
       const value = await this.client.get(key);
+      if (value === null) {
+        console.log(`Key "${key}" not found in Redis`);
+      }
       return value;
     } catch (error) {
       console.error(`Error getting value from Redis: ${error.message}`);
@@ -48,6 +56,15 @@ class RedisClient {
       await this.client.del(key);
     } catch (error) {
       console.error(`Error deleting key from Redis: ${error.message}`);
+    }
+  }
+
+  async disconnect() {
+    try {
+      await this.client.quit();
+      console.log('Redis client disconnected');
+    } catch (error) {
+      console.error(`Error during Redis disconnection: ${error.message}`);
     }
   }
 }
